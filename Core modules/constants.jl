@@ -68,7 +68,7 @@ struct Constants
     Migrate_sd::Float64     # Standard deviation of cell migration time
     Mutrate_mean::Float64   # Mean clonal population mutation time
     Mutrate_sd::Float64     # Standard deviation of clonal population mutation time
-    Grate::Float64          # Basal cell division time
+    Grate::Array{Float64,1}          # Basal cell division time
     Drate::Float64          # Basal cell death time
     Migrate::Float64        # Basal cell migration time
     Mutrate::Float64        # Basal clonal population mutation time
@@ -91,6 +91,8 @@ struct Constants
     c_old::Int64                # Iterator
     wcube::Array{Float64, 1}    # 3x3x3 kernel containing normalized migration probabilities to neighbour voxels, depending on distance from central voxel
 
+    Pasim::Array{Float64, 1}
+    Pchoice::Array{Float64, 2}
 
     ################################################################################
     # INITIALIZATION
@@ -107,7 +109,7 @@ struct Constants
         Neval = ceil(Nstep / 20) + 1
         NstepNevalRatio = round(Nstep / Neval)
         VolEnd = 1.2e5;
-        alt = 3
+        alt = 2
         P0 = 1e1
         K = 2e5
         threshold = 0.2 * K
@@ -124,7 +126,7 @@ struct Constants
         Migrate_sd = fdata[4,2];
 
         # Random sample characteristic times from uniform distributions based in Param_dist.txt data
-        Grate = 1.0
+        Grate = [1.0, 1, 1, 1, 1] # CHANGE THIS
         Migrate = 10.0
         Grate, Migrate = adjust_grate_migrate(Grate, Migrate,
                                     Grate_mean, Grate_sd, Migrate_mean, Migrate_sd)
@@ -167,10 +169,12 @@ struct Constants
             end
         end
 
+        Pasim = [0.99, 0.7, 0.7, 0, 0]
+        Pchoice = [0:0:0:0:0 0.3:0:0:0:0 0.7:0:0:0:0 0:1:0:0:0 0:0:1:0:0]
 
         new(TimeStart, deltat, tspan, Nstep, N, Neval, NstepNevalRatio, VolEnd, alt, P0, K, threshold, fdata,
         Grate_mean, Grate_sd, Drate_mean, Drate_sd, Migrate_mean, Migrate_sd,
-        Mutrate_mean, Mutrate_sd, Grate, Migrate, Drate, Mutrate, Gweight, Dweight, Mutweight, Migweight, c_old, wcube)
+        Mutrate_mean, Mutrate_sd, Grate, Migrate, Drate, Mutrate, Gweight, Dweight, Mutweight, Migweight, c_old, wcube, Pasim, Pchoice)
 
     end
 end

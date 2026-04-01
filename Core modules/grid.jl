@@ -40,6 +40,7 @@ mutable struct Grid
     ################################################################################
 
     G::Array{Float64, 4}                # Grid containing cell number of each clonal population at each voxel
+                                        # CAMBIADO PARA QUE EL ÚLTIMO NÚMERO SEA LA CLASE (CSC -> 0, PROGENITORAS -> {1, ... ,2^alt}, MADURAS -> {2^alt+1, ... 2*2^alt})
     Nec::Array{Float64, 3}              # Grid containing number of necrotic cells per voxel
     Act::Array{Float64, 3}              # Grid containing number of newborn cells per voxel
     Rho::Array{Float64, 3}              # Grid containing local mean growth rate
@@ -64,14 +65,14 @@ mutable struct Grid
 
     function Grid(c::Constants)
 
-        G = zeros(c.N, c.N, c.N, 2^c.alt)   # Cells can belong to any of 2^alt clonal populations, and be placed at any of NxNxN voxels.
+        G = zeros(c.N, c.N, c.N, 2*c.alt + 1)   # Cells can belong to any of 2^alt clonal populations, and be placed at any of NxNxN voxels.
                                             # So, in order to track their number, cells require a 4D grid as this
         Nec = zeros(c.N, c.N, c.N)          # Dead cells do not belong to any clonal population, so a grid tracking their number will only
                                             # 3D, in order to know at which voxel are they placed
         Act = zeros(c.N, c.N, c.N)          # Same as above goes for newborn cells
         Rho = zeros(c.N, c.N, c.N)
 
-        G[Int64(c.N / 2), Int64(c.N / 2), Int64(c.N / 2), 1] = c.P0     # Assign initial cell number to population 1 (without alterations) at central voxel
+        G[Int64(c.N / 2), Int64(c.N / 2), Int64(c.N / 2), 1] = c.P0     # Assign initial cell number to population 1 (CSC without alterations) at central voxel
 
         Gnext = copy(G)                     # Use copy to ensure that G and Gnext are different entities
                                             # (assignment by value, instead of assignment by reference)
@@ -122,7 +123,7 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
         if sum(g.G[i, j, k, :]) > 0
 
             # Evaluate clonal populations only if they have at least 1 cell
-            for e in 1:2^c.alt
+            for e in 1:2*c.alt+1 
                 if g.G[i, j, k, e] > 0
 
                     # Convert decimal representation of current clonal population into binary one
@@ -196,16 +197,31 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     """
 
     # First of all, modify cell division characteristic time depending on alterations carried by current clonal population
-    grate = c.Grate * (1 - binGb' * c.Gweight)
+    # grate = c.Grate 
     # Then, calculate a division probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the less cells will divide, so probability will be lower in crowded voxels
-    Prep = c.deltat / grate *(1-(Popvox + Necvox) / c.K)
+
+    Prep = c.deltat / c.Grate[e] *(1-(Popvox + Necvox) / c.K)
     Prep = normalize_prob(Prep)
     # Random sample newborn cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated division probability
     born = rand(Binomial(Int64(Popgen), Prep))
+    
+    # see how many reproductions are asymmetrical and how many are symmetrical
+    born_asim = rand(Binomial(Int64(born), c.Pasim[e]))
+    born_sim = born - born_asim
+    
+    born_arr = zeros(2*c.alt+1)
+    for l in 1:2*c.alt+1
+        born_arr = born_asim*c.Pchoice[e, l]
+    end
+
+    for l in 1:2*c.alt+1
+        g.Gnext[i, j, k, l] = g.Gnext[i, j, k, l] + born_arr[l]
+    end
+
     # Update multidimensional grids with newborn cells, placing them at the correspoding voxel
-    g.Gnext[i, j, k, e] = g.Gnext[i, j, k, e] + born
+    g.Gnext[i, j, k, e] = g.Gnext[i, j, k, e] + born_sim
     g.Actnext[i, j, k] = g.Actnext[i, j, k] + born
     return born
 
@@ -252,7 +268,7 @@ function migration_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
     """
 
     # First of all, modify cell migration characteristic time depending on alterations carried by current clonal population
-    migrate = c.Migrate * (1 - binGb' * c.Migweight)
+    migrate = c.Migrate * (1 - binGb' * c.Migweight) # we don't take mutations into account
     # Then, calculate a migration probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will migrate, so probability will be higher in crowded voxels
     Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K
