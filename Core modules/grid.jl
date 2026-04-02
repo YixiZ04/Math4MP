@@ -144,7 +144,7 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
                     migration_event!(g, c, binGb, Popvox, Popgen, Necvox, i, j, k, e)
 
                     # Mutation event
-                    mutation_event!(g, c, binGb, Popgen, i, j, k, e)
+                    # mutation_event!(g, c, binGb, Popgen, i, j, k, e)
 
                 end
             end
@@ -213,7 +213,7 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     
     born_arr = zeros(2*c.alt+1)
     for l in 1:2*c.alt+1
-        born_arr = born_asim*c.Pchoice[e, l]
+        born_arr[l] = round(Int, born_asim*c.Pchoice[e, l])
     end
 
     for l in 1:2*c.alt+1
@@ -240,7 +240,8 @@ function death_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
     """
 
     # First of all, modify cell death characteristic time depending on alterations carried by current clonal population
-    drate = c.Drate * (1 - binGb' * c.Dweight)
+    # drate = c.Drate * (1 - binGb' * c.Dweight)
+    drate = c.Drate
     # Then, calculate a death probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will die, so probability will be higher in crowded voxels
     Pkill = c.deltat / drate * (Popvox + Necvox) / c.K
@@ -268,7 +269,8 @@ function migration_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
     """
 
     # First of all, modify cell migration characteristic time depending on alterations carried by current clonal population
-    migrate = c.Migrate * (1 - binGb' * c.Migweight) # we don't take mutations into account
+    # migrate = c.Migrate * (1 - binGb' * c.Migweight) # we don't take mutations into account
+    migrate = c.Migrate[e]
     # Then, calculate a migration probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will migrate, so probability will be higher in crowded voxels
     Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K

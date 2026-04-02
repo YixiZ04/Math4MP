@@ -70,7 +70,7 @@ struct Constants
     Mutrate_sd::Float64     # Standard deviation of clonal population mutation time
     Grate::Array{Float64,1}          # Basal cell division time
     Drate::Float64          # Basal cell death time
-    Migrate::Float64        # Basal cell migration time
+    Migrate::Array{Float64,1}        # Basal cell migration time
     Mutrate::Float64        # Basal clonal population mutation time
 
 
@@ -126,8 +126,8 @@ struct Constants
         Migrate_sd = fdata[4,2];
 
         # Random sample characteristic times from uniform distributions based in Param_dist.txt data
-        Grate = [1.0, 1, 1, 1, 1] # CHANGE THIS
-        Migrate = 10.0
+        Grate = [1.0, 5, 5, 1, 1] # CHANGE THIS
+        Migrate = [1.1, 5, 5, 10, 10.0]
         Grate, Migrate = adjust_grate_migrate(Grate, Migrate,
                                     Grate_mean, Grate_sd, Migrate_mean, Migrate_sd)
         Drate = rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))
@@ -170,11 +170,16 @@ struct Constants
         end
 
         Pasim = [0.99, 0.7, 0.7, 0, 0]
-        Pchoice = [0:0:0:0:0 0.3:0:0:0:0 0.7:0:0:0:0 0:1:0:0:0 0:0:1:0:0]
+        # Pchoice = [0:0:0:0:0 0.3:0:0:0:0 0.7:0:0:0:0 0:1:0:0:0 0:0:1:0:0]
+        Pchoice = zeros(5, 5)
+        Pchoice[1, 2] = 0.3
+        Pchoice[1, 3] = 0.7
+        Pchoice[2, 4] = 1
+        Pchoice[3, 5] = 1
 
         new(TimeStart, deltat, tspan, Nstep, N, Neval, NstepNevalRatio, VolEnd, alt, P0, K, threshold, fdata,
         Grate_mean, Grate_sd, Drate_mean, Drate_sd, Migrate_mean, Migrate_sd,
-        Mutrate_mean, Mutrate_sd, Grate, Migrate, Drate, Mutrate, Gweight, Dweight, Mutweight, Migweight, c_old, wcube, Pasim, Pchoice)
+        Mutrate_mean, Mutrate_sd, Grate, Drate, Migrate, Mutrate, Gweight, Dweight, Mutweight, Migweight, c_old, wcube, Pasim, Pchoice)
 
     end
 end
@@ -184,17 +189,19 @@ end
 # FUNCTIONS
 ################################################################################
 
-function adjust_grate_migrate(Grate::Float64, Migrate::Float64,
+function adjust_grate_migrate(Grate::Array{Float64,1}, Migrate::Array{Float64,1},
     Grate_mean::Float64, Grate_sd::Float64, Migrate_mean::Float64, Migrate_sd::Float64)
 
     """
         This function ensures that cell division and migration times do not get extremely
         different, a situation that would lead to artifacts (cubic tumors, etc)
     """
-
-    while Grate / Migrate < 0.25 || Migrate / Grate < 0.1
-        Grate = rand(Uniform(Grate_mean-Grate_sd, Grate_mean+Grate_sd))
-        Migrate = rand(Uniform(Migrate_mean-Migrate_sd, Migrate_mean+Migrate_sd))
+    
+    for i in 1:5
+        while Grate[i] / Migrate[i] < 0.25 || Migrate[i] / Grate[i] < 0.1
+            Grate[i] = rand(Uniform(Grate_mean-Grate_sd, Grate_mean+Grate_sd))
+            Migrate[i] = rand(Uniform(Migrate_mean-Migrate_sd, Migrate_mean+Migrate_sd))
+        end
     end
     Grate, Migrate
 end
