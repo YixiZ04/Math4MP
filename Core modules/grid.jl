@@ -241,11 +241,15 @@ function death_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
 
     # First of all, modify cell death characteristic time depending on alterations carried by current clonal population
     # drate = c.Drate * (1 - binGb' * c.Dweight)
-    drate = c.Drate
+    drate = c.Drate[e]
     # Then, calculate a death probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will die, so probability will be higher in crowded voxels
-    Pkill = c.deltat / drate * (Popvox + Necvox) / c.K
-    Pkill = normalize_prob(Pkill)
+    if drate == 0
+        Pkill = 0
+    else
+        Pkill = c.deltat / drate * (Popvox + Necvox) / c.K
+        Pkill = normalize_prob(Pkill)
+    end
     # Random sample dead cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated death probability
     dead = rand(Binomial(Int64(Popgen), Pkill))

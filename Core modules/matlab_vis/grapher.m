@@ -1,7 +1,9 @@
-nsim = 4;
+nsim = 6;
 
 [poptot,pops,nec,act] = dcode_simfiles(nsim);
 
+
+%%
 p1 = [];
 p2 = [];
 p3 = [];

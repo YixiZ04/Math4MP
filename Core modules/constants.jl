@@ -69,7 +69,7 @@ struct Constants
     Mutrate_mean::Float64   # Mean clonal population mutation time
     Mutrate_sd::Float64     # Standard deviation of clonal population mutation time
     Grate::Array{Float64,1}          # Basal cell division time
-    Drate::Float64          # Basal cell death time
+    Drate::Array{Float64,1}          # Basal cell death time
     Migrate::Array{Float64,1}        # Basal cell migration time
     Mutrate::Float64        # Basal clonal population mutation time
 
@@ -130,7 +130,7 @@ struct Constants
         Migrate = [1.1, 5, 5, 10, 10.0]
         Grate, Migrate = adjust_grate_migrate(Grate, Migrate,
                                     Grate_mean, Grate_sd, Migrate_mean, Migrate_sd)
-        Drate = rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))
+        Drate = [0, 0, 0, rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd)), rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))]
         Mutrate = rand(Uniform(Mutrate_mean-Mutrate_sd, Mutrate_mean+Mutrate_sd))
 
         # Set all weights
