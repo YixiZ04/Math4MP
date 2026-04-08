@@ -58,9 +58,10 @@ function save_gen_space(g::Grid, m::Monitor, N::Int64, subdir::String=string("Si
                         wpop = g.G[i, j, k, :]
                         actF = g.Act[i, j, k]
                         necF = g.Nec[i, j, k]
+                        Cs = g.Cs[i, j, k]
                         println(file, i, " ", j, " ", k, " ", wpop[1], " ",
                         wpop[2], " ", wpop[3], " ", wpop[4], " ", wpop[5], " ",
-                        actF, " ", necF)
+                        actF, " ", necF, " ", Cs)
                     end
                 end
             end

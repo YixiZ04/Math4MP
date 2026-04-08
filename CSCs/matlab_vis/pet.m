@@ -1,6 +1,6 @@
 nsim = 7;
 
-[poptot,pops,nec,act] = dcode_simfiles(nsim);
+[poptot,pops,nec,act,o2con] = dcode_simfiles(nsim);
 
 %% PET
 
@@ -12,6 +12,15 @@ colormap(flipud(gray))
 imagesc(act{snapshot}(:,:,40))
 axis tight equal
 axis off
+set(gcf,'color','w');
+
+%% CIRC
+
+nsnapshots = size(poptot,2);
+snapshot = round(nsnapshots*0.25);
+figpos = get(groot, 'ScreenSize');
+ventana = figure('Name','Circ map','Units','pixels','OuterPosition',[100 100 2*figpos(4)/3 2*figpos(4)/3]);
+heatmap(o2con{snapshot}(:,:,40))
 set(gcf,'color','w');
 
 %% MRI

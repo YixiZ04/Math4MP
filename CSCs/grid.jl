@@ -45,9 +45,8 @@ mutable struct Grid
     Act::Array{Float64, 3}              # Grid containing number of newborn cells per voxel
     Rho::Array{Float64, 3}              # Grid containing local mean growth rate
 
+    Cs::Array{Float64, 3}               # Grid containing O2 concentration at each voxel. 
 
-    ################################################################################
-    # AUXILIARY MULTIDIMENSIONAL GRIDS
     ################################################################################
 
     Gnext::Array{Float64, 4}            # Auxiliary grid to help updating 'G'
@@ -72,6 +71,8 @@ mutable struct Grid
         Act = zeros(c.N, c.N, c.N)          # Same as above goes for newborn cells
         Rho = zeros(c.N, c.N, c.N)
 
+        Cs = zeros(c.N, c.N, c.N)           # Grid containing O2 concentration at each voxel
+        
         G[Int64(c.N / 2), Int64(c.N / 2), Int64(c.N / 2), 1] = c.P0     # Assign initial cell number to population 1 (CSC without alterations) at central voxel
 
         Gnext = copy(G)                     # Use copy to ensure that G and Gnext are different entities
@@ -85,7 +86,7 @@ mutable struct Grid
         Occ = [CartesianIndex(Int(c.N / 2), Int(c.N / 2), Int(c.N / 2))]
         ROcc = [CartesianIndex(Int(c.N / 2), Int(c.N / 2), Int(c.N / 2))]
 
-        new(G, Nec, Act, Rho, Gnext, G2, Necnext, Actnext, Rhonext, Occ, ROcc)
+        new(G, Nec, Act, Rho, Cs, Gnext, G2, Necnext, Actnext, Rhonext, Occ, ROcc)
     end
 end
 
@@ -119,6 +120,8 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
         # so activity matrix needs to be emptied at each time step
         g.Actnext[i, j, k] = 0
 
+        g.Cs[i, j, k] = o2_concentration(sum(g.G[i, j, k, :]))   # Update O2 concentration at each voxel at each iteration, depending on current voxel occupancy
+
         # Evaluate voxels only if they contain at least 1 cell
         if sum(g.G[i, j, k, :]) > 0
 
@@ -131,6 +134,7 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
                     Popgen = g.G[i, j, k, e]        # Cell number of current clonal population
                     Popvox = sum(g.G[i, j, k, :])   # Total cell number of current voxel
                     Necvox = g.Nec[i, j, k]         # Number of necrotic cells of current voxel
+                    g.Cs[i, j, k] = o2_concentration(Popvox)
 
                     # Reproduction event
                     born = reproduction_event!(g, c, Popgen, Popvox, Necvox, i, j, k, e)
@@ -180,6 +184,19 @@ function normalize_prob(Prep::Float64)
 end
 
 
+function o2_concentration(Popvox::Float64)
+
+    """
+        This function calculates the oxygen concentration at each voxel taking into account a constant vascularization
+    """
+    V = 0.2
+    cv = 0.7  # vessel concentration
+    k1 = 0.0001
+    k2 = 1
+    C = (k2 * V * cv) / (k2 * V + k1 * Popvox)
+    return C
+end
+
 
 function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     Popvox::Float64, Necvox::Float64, i::Int64, j::Int64, k::Int64, e::Int64)
@@ -193,7 +210,7 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     # Then, calculate a division probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the less cells will divide, so probability will be lower in crowded voxels
 
-    Prep = c.deltat / c.Grate[e] *(1-(Popvox + Necvox) / c.K)
+    Prep = c.deltat / c.Grate[e] *(1-(Popvox + Necvox) / c.K) * o2_concentration(Popvox)
     Prep = normalize_prob(Prep)
     # Random sample newborn cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated division probability
@@ -265,7 +282,7 @@ function migration_event!(g::Grid, c::Constants, Popvox::Float64,
     migrate = c.Migrate[e]
     # Then, calculate a migration probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will migrate, so probability will be higher in crowded voxels
-    Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K
+    Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K * o2_concentration(Popvox)
     Pmig = normalize_prob(Pmig)
     # Random sample migrating cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated migration probability

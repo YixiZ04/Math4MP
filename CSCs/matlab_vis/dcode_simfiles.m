@@ -21,6 +21,7 @@ poptot = cell(1,Size);
 pops = cell(1,Size);
 nec = cell(1,Size);
 act = cell(1,Size);
+o2con = cell(1,Size);
 shannon = zeros(1,Size);
 simpson = zeros(1,Size);
 totact = zeros(1,Size);
@@ -37,6 +38,7 @@ for i = 1:Size
     pops{i} = zeros(N,N,N,alt);
     nec{i} = zeros(N,N,N);
     act{i} = zeros(N,N,N);
+    o2con{i} = zeros(N,N,N);
 
     f = ['Sim' num2str(nsim) '/Gen_space_' num2str(i*20) '.txt'];
     delimiterIn = ' ';
@@ -96,6 +98,14 @@ for i = 1:Size
         nec{i}(x(j),y(j),z(j)) = necvox(j);
     end
 
+    occ = A{i}(find(A{i}(:,alt+6)),[1:3]);  
+    x = occ(:,1);
+    y = occ(:,2);
+    z = occ(:,3);
+    circ_ = A{i}(find(A{i}(:,alt+6)),alt+6);
+    for j = 1:length(occ(:,1))
+        o2con{i}(x(j),y(j),z(j)) = circ_(j);
+    end
 
     mascP{i} = poptot{i}+nec{i} > threshold;
     VOL2(i) = sum(sum(sum(mascP{i})));
@@ -110,9 +120,7 @@ save(['Sim' num2str(nsim) '/Vol_voxels.mat'],'VOL2');
 save(['Sim' num2str(nsim) '/CellN_total.mat'],'totcell');
 save(['Sim' num2str(nsim) '/Act_total.mat'],'totact');
 save(['Sim' num2str(nsim) '/Nec_total.mat'],'totnec');
-save(['Sim' num2str(nsim) '/Shannon.mat'],'shannon');
-save(['Sim' num2str(nsim) '/Simpson.mat'],'simpson');    
-
+save(['Sim' num2str(nsim) '/o2con.mat'],'o2con');
 
 
 
