@@ -51,11 +51,14 @@ include("tools.jl")         # import helper functions
 include("grid.jl")          # main data structure
 
 
+if length(ARGS) < 1
+    error("Usage: julia main.jl <sim_number> [Gweight] [Migweight] ; e.g. julia main.jl 5 0.32 0.65")
+end
+
 # Fix seed if you want sim results to be reproducible
 # const seedVal = 1
 # Random.seed!(seedVal)
 Random.seed!()
-
 
 c = Constants()
 g = Grid(c)

@@ -149,10 +149,12 @@ struct Constants
 
         Agg_factor = 0.5
         #Agg_factor = 0.5
-        Gweight = [parse(Float64,ARGS[2])]
-        Dweight = [0]
-        Mutweight = [0]
-        Migweight = [parse(Float64,ARGS[3])]
+        Gweight_value = length(ARGS) >= 2 ? parse(Float64, ARGS[2]) : 0.32
+        Migweight_value = length(ARGS) >= 3 ? parse(Float64, ARGS[3]) : 0.65
+        Gweight = [Gweight_value]
+        Dweight = [0.0]
+        Mutweight = [0.0]
+        Migweight = [Migweight_value]
 
         # Create weights for surrounding voxels (Moore neighbourhood)
         c_old = 0

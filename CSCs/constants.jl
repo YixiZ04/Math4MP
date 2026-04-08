@@ -75,6 +75,19 @@ mutable struct Constants
 
 
     ################################################################################
+<<<<<<< HEAD
+=======
+    # MUTATION WEIGHTS
+    ################################################################################
+
+    Gweight::Array{Float64, 1}      # Set of weights that influence basal cell division time
+    Dweight::Array{Float64, 1}      # Set of weights that influence basal cell death time
+    Mutweight::Array{Float64, 1}    # Set of weights that influence basal clonal population mutation time
+    Migweight::Array{Float64, 1}    # Set of weights that influence basal cell migration time
+
+
+    ################################################################################
+>>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
     # AUXILIARY KERNEL FOR DISTRIBUTING MIGRATING CELLS IN THE NEIGHBOURHOOD
     ################################################################################
 
@@ -116,11 +129,24 @@ mutable struct Constants
         Migrate_sd = fdata[4,2];
 
         # Random sample characteristic times from uniform distributions based in Param_dist.txt data
+<<<<<<< HEAD
         Grate = [200.0, 11.0, 11.0, 1000.0, 1000.0] # CHANGE THIS
+=======
+        Grate = [200.0, 1, 1, 1000.0, 1000.0] # CHANGE THIS
+>>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
         Migrate = rand(Uniform(Migrate_mean-Migrate_sd, Migrate_mean+Migrate_sd), 5)
         Drate = [0.0, 0.0, 0.0, rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd)), rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))]
         Mutrate = rand(Uniform(Mutrate_mean-Mutrate_sd, Mutrate_mean+Mutrate_sd))
 
+<<<<<<< HEAD
+=======
+        # Set all weights
+        Gweight = [0.32, 0.28, 0.25]
+        Dweight = [-0.15, -0.05, -0.45]
+        Mutweight = [0.18, 0.18, 0.32]
+        Migweight = [0.65, 0.05, 0.05]
+
+>>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
         # Create weights for surrounding voxels (Moore neighbourhood)
         c_old = 0
         wcube = zeros(26)
@@ -161,8 +187,36 @@ mutable struct Constants
 
         new(TimeStart, deltat, tspan, Nstep, N, Neval, NstepNevalRatio, VolEnd, alt, P0, K, threshold, fdata,
         Grate_mean, Grate_sd, Drate_mean, Drate_sd, Migrate_mean, Migrate_sd,
+<<<<<<< HEAD
         Mutrate_mean, Mutrate_sd, Grate, Drate, Migrate, Mutrate, c_old, wcube, Pasim, Pchoice)
+=======
+        Mutrate_mean, Mutrate_sd, Grate, Drate, Migrate, Mutrate, Gweight, Dweight, Mutweight, Migweight, c_old, wcube, Pasim, Pchoice)
+>>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
 
     end
 end
 
+<<<<<<< HEAD
+=======
+
+################################################################################
+# FUNCTIONS
+################################################################################
+
+function adjust_grate_migrate(Grate::Array{Float64,1}, Migrate::Array{Float64,1},
+    Grate_mean::Float64, Grate_sd::Float64, Migrate_mean::Float64, Migrate_sd::Float64)
+
+    """
+        This function ensures that cell division and migration times do not get extremely
+        different, a situation that would lead to artifacts (cubic tumors, etc)
+    """
+    
+    for i in 1:5
+        while Grate[i] / Migrate[i] < 0.25 || Migrate[i] / Grate[i] < 0.1
+            Grate[i] = rand(Uniform(Grate_mean-Grate_sd, Grate_mean+Grate_sd))
+            Migrate[i] = rand(Uniform(Migrate_mean-Migrate_sd, Migrate_mean+Migrate_sd))
+        end
+    end
+    Grate, Migrate
+end
+>>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
