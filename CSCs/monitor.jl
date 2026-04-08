@@ -43,11 +43,6 @@ mutable struct Monitor
     Rvol::Array{Float64, 1}         # Tumor volume (all voxels containing at least 1 cell)
     totnew::Array{Float64, 1}       # Total cell activity of whole tumor (only voxels exceeding threshold number of cells)
     Rtotnew::Array{Float64, 1}      # Total cell activity of whole tumor (all voxels containing at least 1 cell)
-<<<<<<< HEAD
-=======
-    Shannon::Array{Float64, 1}      # Shannon index
-    Simpson::Array{Float64, 1}      # Simpson index
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
     pops::Array{Float64, 2}         # Total cell number of each clonal population
     popt::Array{Int64, 3}           # Total cell number per voxel
     Vol2::Array{Float64, 1}         # Alternative computation of tumor volume (based on occupied voxels' cartesian coordinates)
@@ -84,14 +79,7 @@ mutable struct Monitor
         Rvol[1] = 1                         # As central voxel contains initial population at 1st time step, Rvol will be equal to 1 in 1st evaluation step
         totnew = zeros(Neval)
         Rtotnew = zeros(Neval)
-<<<<<<< HEAD
         pops = zeros(2*c.alt+1, Neval)
-=======
-        Shannon = zeros(Neval)
-        Simpson = zeros(Neval)
-        Simpson[1] = 1                      # Simpson index for zero diversity is equal to 1, so 1st slot of this array will be equal to 1 in 1st evaluation step
-        pops = zeros(2^c.alt, Neval)
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
         pops[1, 1] = c.P0                   # At 1st evaluation step, only clonal population with no alterations will contain cells
         popt = Array{Int64}(undef, N, N, N)
         popt[Int64(N / 2), Int64(N / 2), Int64(N / 2)] = c.P0   # At 1st evaluation step, only central voxel will contain cells
@@ -100,11 +88,7 @@ mutable struct Monitor
         evalstep = 1
         t = 0
 
-<<<<<<< HEAD
         new(totpop, totnec, vol, Rvol, totnew, Rtotnew, pops,
-=======
-        new(totpop, totnec, vol, Rvol, totnew, Rtotnew, Shannon, Simpson, pops,
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
             popt, Vol2, elapsed, evalstep, t)
     end
 end
@@ -146,28 +130,11 @@ function update_monitor_stats!(m::Monitor, c::Constants)
         to be already calculated
     """
 
-<<<<<<< HEAD
-=======
-    # Clear slots to be calculated in current evaluation step
-    m.Shannon[m.evalstep + 1] = 0
-    m.Simpson[m.evalstep + 1] = 0
-
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
     # Get tumor volume 'Vol2' by counting how many voxels are occupied
     ROcc =  findall(x -> x > c.threshold, m.popt)
     m.Vol2[m.evalstep + 1] = size(ROcc, 1)
     ROcc = []
 
-<<<<<<< HEAD
-=======
-    # Diversity indexes depend on the number of clonal populations that can exist, so iterate along each one of them to check if they have any cell
-    for e = 1 : 2^c.alt
-        if m.pops[e, m.evalstep + 1] > 0    # Consider only populations with at least 1 cell for these calculations; otherwise, NaNs will appear
-            m.Shannon[m.evalstep + 1] = m.Shannon[m.evalstep + 1] - (m.pops[e, m.evalstep + 1] / m.totpop[m.evalstep + 1]) * log(m.pops[e, m.evalstep + 1] / m.totpop[m.evalstep + 1])
-            m.Simpson[m.evalstep + 1] = m.Simpson[m.evalstep + 1] + (m.pops[e, m.evalstep + 1] / m.totpop[m.evalstep + 1])^2
-        end
-    end
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
 
     # Retrieve elapsed time between evaluation steps
     m.elapsed = time() - c.TimeStart
@@ -190,11 +157,6 @@ function monitor2files(m::Monitor, subdir::String=string("Sim",string(ARGS[1]),"
     writedlm(joinpath(dir_to_save, string("Vol_real.txt")), m.Rvol)
     writedlm(joinpath(dir_to_save, string("ActPET.txt")), m.totnew)
     writedlm(joinpath(dir_to_save, string("Act_real.txt")), m.Rtotnew)
-<<<<<<< HEAD
-=======
-    writedlm(joinpath(dir_to_save, string("Shannon.txt")), m.Shannon)
-    writedlm(joinpath(dir_to_save, string("Simpson.txt")), m.Simpson)
->>>>>>> 3a2a798c2a4bb90fbd881a1001d5847fafc6bacc
     writedlm(joinpath(dir_to_save, string("Genspop.txt")), m.pops)
 end
 
