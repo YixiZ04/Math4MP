@@ -40,17 +40,6 @@ include("grid.jl")
 # FUNCTIONS
 ################################################################################
 
-function decimal2binstr(e::Int64, alt::Int64)
-
-    """
-        This function converts a decimal number into a binary string
-    """
-
-    binG = digits(e-1, base=2, pad=alt) |> reverse
-    return convert(Array{Float64, 1}, binG)
-end
-
-
 function save_gen_space(g::Grid, m::Monitor, N::Int64, subdir::String=string("Sim",string(ARGS[1]),"/"))
 
     """
@@ -90,7 +79,7 @@ function print_curr_stats(m::Monitor)
 
     println("Cell no: ", m.totpop[m.evalstep], "; Volume: ", m.Vol2[m.evalstep],
      "; Activity: ", m.totnew[m.evalstep], "; Necrotics: ",
-    m.totnec[m.evalstep], "; Het: ", m.Shannon[m.evalstep])
+    m.totnec[m.evalstep])
     println("Iteration: ", m.t, "; Time elapsed: ", m.elapsed)
     println("------------------------------------------------------------------")
 end

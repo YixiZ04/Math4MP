@@ -126,8 +126,6 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
             for e in 1:2*c.alt+1 
                 if g.G[i, j, k, e] > 0
 
-                    # Convert decimal representation of current clonal population into binary one
-                    binGb = decimal2binstr(e, c.alt)
 
                     # Retrieve basic voxel info
                     Popgen = g.G[i, j, k, e]        # Cell number of current clonal population
@@ -135,16 +133,13 @@ function grid_time_step!(g::Grid, c::Constants, m::Monitor)
                     Necvox = g.Nec[i, j, k]         # Number of necrotic cells of current voxel
 
                     # Reproduction event
-                    born = reproduction_event!(g, c, Popgen, Popvox, Necvox, i, j, k, e, binGb)
+                    born = reproduction_event!(g, c, Popgen, Popvox, Necvox, i, j, k, e)
 
                     # Death event
-                    dead = death_event!(g, c, binGb, Popvox, Necvox, Popgen, i, j, k, e)
+                    dead = death_event!(g, c, Popvox, Necvox, Popgen, i, j, k, e)
 
                     # Migration event
-                    migration_event!(g, c, binGb, Popvox, Popgen, Necvox, i, j, k, e)
-
-                    # Mutation event
-                    # mutation_event!(g, c, binGb, Popgen, i, j, k, e)
+                    migration_event!(g, c, Popvox, Popgen, Necvox, i, j, k, e)
 
                 end
             end
@@ -187,8 +182,7 @@ end
 
 
 function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
-    Popvox::Float64, Necvox::Float64, i::Int64, j::Int64, k::Int64, e::Int64,
-    binGb::Array{Float64, 1})
+    Popvox::Float64, Necvox::Float64, i::Int64, j::Int64, k::Int64, e::Int64)
 
     """
         Reproduction event
@@ -196,8 +190,6 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
         This function performs a reproduction event. It calculates how many newborn cells of a given clonal population will appear in a given iteration
     """
 
-    # First of all, modify cell division characteristic time depending on alterations carried by current clonal population
-    # grate = c.Grate 
     # Then, calculate a division probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the less cells will divide, so probability will be lower in crowded voxels
 
@@ -226,8 +218,8 @@ end
 
 
 
-function death_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
-    Popvox::Float64, Necvox::Float64, Popgen::Float64, i::Int64, j::Int64,
+function death_event!(g::Grid, c::Constants, Popvox::Float64, 
+    Necvox::Float64, Popgen::Float64, i::Int64, j::Int64,
     k::Int64, e::Int64)
 
     """
@@ -236,9 +228,9 @@ function death_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
         This function performs a death event. It calculates how many cells of a given clonal population will die in a given iteration
     """
 
-    # First of all, modify cell death characteristic time depending on alterations carried by current clonal population
-    # drate = c.Drate * (1 - binGb' * c.Dweight)
+    # Define the death rate for the cell type
     drate = c.Drate[e]
+
     # Then, calculate a death probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will die, so probability will be higher in crowded voxels
     if drate == 0
@@ -258,8 +250,8 @@ end
 
 
 
-function migration_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
-    Popvox::Float64, Popgen::Float64, Necvox::Float64, i::Int64, j::Int64,
+function migration_event!(g::Grid, c::Constants, Popvox::Float64, 
+    Popgen::Float64, Necvox::Float64, i::Int64, j::Int64,
     k::Int64, e::Int64)
 
     """
@@ -269,8 +261,7 @@ function migration_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
         Migration occurs in two steps: first of all, cells leaving current voxel are calculated, and then, leaving cells are distributed in surrounding voxels
     """
 
-    # First of all, modify cell migration characteristic time depending on alterations carried by current clonal population
-    # migrate = c.Migrate * (1 - binGb' * c.Migweight) # we don't take mutations into account
+    # Define the migration rate for the cell type
     migrate = c.Migrate[e]
     # Then, calculate a migration probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will migrate, so probability will be higher in crowded voxels
@@ -305,45 +296,5 @@ function migration_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
                 end
             end
         end
-    end
-end
-
-
-
-function mutation_event!(g::Grid, c::Constants, binGb::Array{Float64, 1},
-    Popgen::Float64, i::Int64, j::Int64, k::Int64, e::Int64)
-
-    """
-        Mutation event
-
-        This function performs a mutation event. It introduces a new alteration in a single cell from a given clonal population
-    """
-
-    # First of all, modify clonal population mutation characteristic time depending on alterations carried by current clonal population
-    mutrate = c.Mutrate * (1 - binGb' * c.Mutweight)
-    # Then, calculate a mutation probability depending on previous time, on time step length, and on how many cells belong to current clonal population
-    # The more cells a clonal population has, the more likely it will be for one of them to acquire an alteration
-    Pmut = c.deltat / mutrate * (Popgen / c.K)
-    Pmut = normalize_prob(Pmut)
-
-    # Perform a Monte Carlo step to decide whether a mutation is going to occur or not
-    r = rand(1)
-    r = r[1]
-    if r < Pmut && e != 2^c.alt # Last condition ensures that the clonal population with all alterations does not suffer any new mutation
-        # Pick a random non-altered pathway (slot) and turn it to mutated
-        nonalter = findall(x -> x < 1, binGb)   # Find slots in clonal population binary representation with 0, meaning that they are not altered
-        r2 = rand(1:length(nonalter))           # Select one of those slots with 0
-        mutating = nonalter[r2]
-        binGb[mutating] = 1                     # Change slot status from non-altered (0) to altered (1)
-
-        # Switch binary array back to binary string
-        binGc = string(Int(binGb[1]), Int(binGb[2]), Int(binGb[3]))
-
-        # Code below retrieves back clonal population decimal representation from binary string
-        decG = parse(Int, binGc, base=2) + 1
-
-        # Update multidimensional grid with cell from new clonal population
-        g.Gnext[i, j, k, e] = g.Gnext[i, j, k, e] - 1
-        g.Gnext[i, j, k, decG] = g.Gnext[i, j, k, decG] + 1
     end
 end
