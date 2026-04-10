@@ -30,3 +30,21 @@ plot(ts, p3)
 plot(ts, p4)
 plot(ts, p5)
 legend('CSC', 'prog-1', 'prog-2', 'hija prog-1', 'hija prog-2')
+
+%% ACT
+
+j = length(act);
+act_mat = zeros(1, j);
+for i=1:j
+    act_mat(1, i) = sum(sum(sum(act{i})));
+end
+plot(1:j, act_mat, 'o')
+
+%% NEC
+
+j = length(nec);
+nec_mat = zeros(1, j);
+for i=1:j
+    nec_mat(1, i) = sum(sum(sum(nec{i})));
+end
+plot(1:j, nec_mat, 'o')
