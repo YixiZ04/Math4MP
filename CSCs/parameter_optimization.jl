@@ -14,11 +14,13 @@
         - The population distribution for each cell type. The objective proportions are  [0.01, 0.04, 0.16, 0.158, 0.632]
         - The surface regularity ratio. The "objective" value here is 0.7.
     If not changing anything, 50 trials will be run and the search space will be:
-        - CSC growth rate: [100, 500]
+        - CSC growth rate: [1, 500]
         - Progeny growth rate: [1, 150]
         - Mature cell growth rate: [100, 1000]
         - Migration rate: [80, 300]
-
+    NOTE: If wanted to change search space, it should be changed at the objective functions found at the very end of this script.
+    This outputs an .tsv file with no headers, but the values will be:
+    CSC_rate    Progeny_rate    Mature_cell_rate    Mig_rate    RMSE    iter_diff   regularity_diff    proportions diff
 """ 
 
 using PythonCall
@@ -46,87 +48,8 @@ OBJECTIVE_POPULATION_PROPORTION = [0.01, 0.04, 0.16, 0.158, 0.632]          # Ca
 
 # Optimization parameters
 
-N_TRIALS = 50                                                               # Change to 1000 to get a more robust search
+N_TRIALS = 1000                                                             # Change to 1000 to get a more robust search
 
-
-# The objective function
-
-function objective(trial)
-    
-    c = Constants()
-    g = Grid(c)
-    m = Monitor(c)
-
-    # DEFINE THE SEARCH SPACE
-
-    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 100, 500))
-    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 150))
-    Mature_cell_rate = pyconvert(Float64, trial.suggest_float("Mature_cell_rate", 100, 1000))
-    mig_rate = pyconvert(Float64, trial.suggest_float("mig_rate", 80, 300))
-    c.Grate[1] = CSC_rate
-    c.Grate[2] = c.Grate[3] = Progeny_rate
-    c.Grate[4] = c.Grate[5] = Mature_cell_rate
-    c.Migrate = fill(mig_rate, 5)
-
-    Occ, iterations, volume, pops = _main_process(g, c, m)
-
-    # Prepare for iteration diff loss function
-    
-    total_iteration = max(iterations)
-    
-
-    #Prepare for Gompertzian model fit
-    iterations = push!(iterations, total_iteration + 20)
-    no_zeros_volume_array = volume[1:length(iterations)]
-
-
-
-    # Prepare for surface regularity loss function
-    vol = maximun(volume)
-    surface = _get_surface_by_occupied_voxels(Occ)
-    regularity_ratio = _calculate_surface_regularity(vol, surface)
-
-    # Prepare for proportion fit
-
-    proportions = _get_population_proportion(pops)
-
-    # Get losses
-    rmse = _gompertz_rmse(iterations, no_zeros_volume_array)
-    iter_loss = _iter_length_diff(MEAN_ITERATION,total_iteration)
-    surface_regularity_loss = _surface_regularity_diff(regularity_ratio, OBJECTIVE_SURFACE_REGULARITY)
-    proportion_loss = _proportion_diff(proportions, OBJECTIVE_POPULATION_PROPORTION)
-
-    return rmse, iter_loss, surface_regularity_loss, proportion_loss
-end
-
-# Optimization process
-
-study = optuna.create_study(
-    directions = ["minimize", "minimize","minimize","minimize"]
-)
-study.optimize(objective, n_trials=N_TRIALS)
-
-# Get result files
-
-trials = study.trials
-results = []
-
-for trial in trials
-    CSC_rate = pyconvert(Float64, trial.params["CSC_rate"])
-    Progeny_rate = pyconvert(Float64, trial.params["Progeny_rate"])
-    Mature_cell_rate = pyconvert(Float64, trial.params["Mature_cell_rate"])
-    mig_rate = pyconvert(Float64, trial.params["mig_rate"])    
-
-    loss1 = pyconvert(Float64, t.values[0])
-    loss2 = pyconvert(Float64, t.values[1]) 
-    loss3 = pyconvert(Float64, t.values[2])
-    loss4 = pyconvert(Float64, t.values[3]) 
-end
-push!(results, [x, y, loss1, loss2])
-
-writedlm("optuna_results.tsv",
-         results_matrix,
-         '\t')
 
 # HELPER FUNCTIONS
 
@@ -290,3 +213,100 @@ function _main_process(g::Grid, c::Constants, m::Monitor)
     end
     return (g.Occ, iterations, m.vol, m.pops)
 end
+
+# The objective function
+
+function objective(trial)
+    
+    c = Constants()
+    g = Grid(c)
+    m = Monitor(c)
+
+    # DEFINE THE SEARCH SPACE
+
+    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 1, 500))
+    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 150))
+    Mature_cell_rate = pyconvert(Float64, trial.suggest_float("Mature_cell_rate", 100, 1000))
+    mig_rate = pyconvert(Float64, trial.suggest_float("mig_rate", 80, 300))
+    c.Grate[1] = CSC_rate
+    c.Grate[2] = c.Grate[3] = Progeny_rate
+    c.Grate[4] = c.Grate[5] = Mature_cell_rate
+    c.Migrate = fill(mig_rate, 5)
+
+    Occ, iterations, volume, pops = _main_process(g, c, m)
+
+    # Prepare for iteration diff loss function
+    
+    total_iteration = maximum(iterations)
+    
+
+    #Prepare for Gompertzian model fit
+    iterations = push!(iterations, total_iteration + 20)
+    no_zeros_volume_array = volume[1:length(iterations)]
+
+
+
+    # Prepare for surface regularity loss function
+    vol = maximum(volume)
+    surface = _get_surface_by_occupied_voxels(Occ)
+    regularity_ratio = _calculate_surface_regularity(vol, surface)
+
+    # Prepare for proportion fit
+
+    proportions = _get_population_proportion(pops)
+
+    # Get losses
+    rmse = _gompertz_rmse(iterations, no_zeros_volume_array)
+    iter_loss = _iter_length_diff(MEAN_ITERATION,total_iteration)
+    surface_regularity_loss = _surface_regularity_diff(regularity_ratio, OBJECTIVE_SURFACE_REGULARITY)
+    proportion_loss = _proportion_diff(proportions, OBJECTIVE_POPULATION_PROPORTION)
+
+    return rmse, iter_loss, surface_regularity_loss, proportion_loss
+end
+
+# Optimization process
+
+study = optuna.create_study(
+    directions = pylist(["minimize", "minimize","minimize","minimize"])
+)
+study.optimize(objective, n_trials=N_TRIALS)
+
+# Get result files
+
+trials = study.trials
+results = []
+
+for trial in trials
+
+    CSC_rate = pyconvert(Float64, trial.params["CSC_rate"])
+    Progeny_rate = pyconvert(Float64, trial.params["Progeny_rates"])    
+    Mature_cell_rate = pyconvert(Float64, trial.params["Mature_cell_rate"])
+    mig_rate = pyconvert(Float64, trial.params["mig_rate"])
+
+    loss1 = pyconvert(Float64, trial.values[0])
+    loss2 = pyconvert(Float64, trial.values[1])
+    loss3 = pyconvert(Float64, trial.values[2])
+    loss4 = pyconvert(Float64, trial.values[3])
+
+    push!(results,
+        [
+            CSC_rate,
+            Progeny_rate,
+            Mature_cell_rate,
+            mig_rate,
+            loss1,
+            loss2,
+            loss3,
+            loss4
+        ]
+    )
+
+end
+
+results_matrix = reduce(vcat, permutedims.(results))
+
+writedlm(
+    "optuna_results.tsv",
+    results_matrix,
+    '\t'
+)
