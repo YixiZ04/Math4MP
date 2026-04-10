@@ -1,4 +1,4 @@
-function [poptot,pops,nec,act] = dcode_simfiles(nsim)
+function [poptot,pops,nec,act,o2con] = dcode_simfiles(nsim)
 
 
 disp(['Decoding files from simulation number ' num2str(nsim)])
