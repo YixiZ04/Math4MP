@@ -14,8 +14,8 @@
         - The population distribution for each cell type. The objective proportions are  [0.01, 0.04, 0.16, 0.158, 0.632]
         - The surface regularity ratio. The "objective" value here is 0.7.
     If not changing anything, 50 trials will be run and the search space will be:
-        - CSC growth rate: [1, 500]
-        - Progeny growth rate: [1, 150]
+        - CSC growth rate: [1, 1000]
+        - Progeny growth rate: [1, 1000]
         - Mature cell growth rate: [100, 1000]
         - Migration rate: [80, 300]
     NOTE: If wanted to change search space, it should be changed at the objective functions found at the very end of this script.
@@ -27,7 +27,7 @@ using PythonCall
 using Distributions     # Includes binomial and multinomial distributions
 using Random            # Allows random sampling from previous probability distributions
 using DelimitedFiles    # Enhances file I/O
-
+using LinearAlgebra
 include("constants.jl")
 include("monitor.jl")
 include("grid.jl")
@@ -224,8 +224,8 @@ function objective(trial)
 
     # DEFINE THE SEARCH SPACE
 
-    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 1, 500))
-    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 150))
+    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 1, 1000))
+    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 1000))
     Mature_cell_rate = pyconvert(Float64, trial.suggest_float("Mature_cell_rate", 100, 1000))
     mig_rate = pyconvert(Float64, trial.suggest_float("mig_rate", 80, 300))
     c.Grate[1] = CSC_rate

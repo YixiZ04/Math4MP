@@ -228,8 +228,8 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     #     born_arr[l] = round(Int, born_asim*c.Pchoice[e, l])
     #     g.Gnext[i, j, k, l] = g.Gnext[i, j, k, l] + born_arr[l]
     # end
-    born_arr = round(born_asim * c.Pchoice[e, :])
-    Gnext[i, j, k, :] = Gnext[i, j, k, :] + born_arr
+    born_arr = round.(Int64, born_asim .* c.Pchoice[e, :])
+    g.Gnext[i, j, k, :] = g.Gnext[i, j, k, :] .+ born_arr
 
     # Update multidimensional grids with newborn cells, placing them at the correspoding voxel
     g.Gnext[i, j, k, e] = g.Gnext[i, j, k, e] + born_sim
