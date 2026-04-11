@@ -36,6 +36,7 @@
 using Distributions     # Includes binomial and multinomial distributions
 using Random            # Allows random sampling from previous probability distributions
 using DelimitedFiles    # Enhances file I/O
+using LinearAlgebra     # Allows for cross-product used for optimisation
 
 
 ################################################################################

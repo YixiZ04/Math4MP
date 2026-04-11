@@ -92,6 +92,7 @@ for i = 1:Size
     % SURFACE REGULARITY AND VOLUME (JULIAN'S METHOD)
 
     if sum(mascP1{i}(:)) > 1e3
+        
         hiso = patch(isosurface(mascP1{i},0.5),'FaceColor',[0,1,0.95],'EdgeColor','none');
         size(hiso)
 

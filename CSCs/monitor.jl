@@ -111,7 +111,7 @@ function update_monitor_populations!(m::Monitor, c::Constants,
     m.Rtotnew[m.evalstep + 1] = m.Rtotnew[m.evalstep + 1] + sum(Act[i, j, k])       # Sum all newborn cells from each voxel to get total tumor activity 'Rtotnew'
     m.Rvol[m.evalstep + 1] = m.Rvol[m.evalstep + 1] + 1                             # Each time a voxel with cells is evaluated, add 1 to total tumor volume 'Rvol'
 
-    for e = 1 : 2^c.alt
+    for e = 1 : 2*c.alt + 1
         m.pops[e, m.evalstep + 1] = m.pops[e, m.evalstep + 1] + G[i, j, k, e]       # Sum all cells from each clonal population to get total cell number per clonal pop
     end
 

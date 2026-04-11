@@ -189,11 +189,14 @@ function o2_concentration(Popvox::Float64)
     """
         This function calculates the oxygen concentration at each voxel taking into account a constant vascularization
     """
-    V = 0.2
-    cv = 0.7  # vessel concentration
-    k1 = 0.0001
-    k2 = 1
-    C = (k2 * V * cv) / (k2 * V + k1 * Popvox)
+    # V = 0.2
+    # cv = 0.7  # vessel concentration
+    # k1 = 0.0001
+    # k2 = 1
+    # C = (k2 * V * cv) / (k2 * V + k1 * Popvox)
+    Cv0 = 100
+    k3 = 0.0005
+    C = Cv0 / (1 + k3 * Popvox)
     return C
 end
 
@@ -221,10 +224,12 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     born_sim = born - born_asim
     
     born_arr = zeros(2*c.alt+1)
-    for l in 1:2*c.alt+1
-        born_arr[l] = round(Int, born_asim*c.Pchoice[e, l])
-        g.Gnext[i, j, k, l] = g.Gnext[i, j, k, l] + born_arr[l]
-    end
+    # for l in 1:2*c.alt+1
+    #     born_arr[l] = round(Int, born_asim*c.Pchoice[e, l])
+    #     g.Gnext[i, j, k, l] = g.Gnext[i, j, k, l] + born_arr[l]
+    # end
+    born_arr = round(born_asim * c.Pchoice[e, :])
+    Gnext[i, j, k, :] = Gnext[i, j, k, :] + born_arr
 
     # Update multidimensional grids with newborn cells, placing them at the correspoding voxel
     g.Gnext[i, j, k, e] = g.Gnext[i, j, k, e] + born_sim

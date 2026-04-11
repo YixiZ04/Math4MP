@@ -1,4 +1,4 @@
-nsim = 2;
+nsim = 4;
 
 [poptot,pops,nec,act,o2con] = dcode_simfiles(nsim);
 
