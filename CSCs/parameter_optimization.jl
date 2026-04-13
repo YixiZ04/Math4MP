@@ -14,20 +14,21 @@
         - The population distribution for each cell type. The objective proportions are  [0.01, 0.04, 0.16, 0.158, 0.632]
         - The surface regularity ratio. The "objective" value here is 0.7.
     If not changing anything, 50 trials will be run and the search space will be:
-        - CSC growth rate: [1, 1000]
-        - Progeny growth rate: [1, 1000]
-        - Mature cell growth rate: [100, 1000]
+        - CSC growth rate: [100, 200]
+        - Progeny growth rate: [1, 15]
+        - Mature cell growth rate: [1000, 2000]
         - Migration rate: [80, 300]
     NOTE: If wanted to change search space, it should be changed at the objective functions found at the very end of this script.
     This outputs an .tsv file with no headers, but the values will be:
     CSC_rate    Progeny_rate    Mature_cell_rate    Mig_rate    RMSE    iter_diff   regularity_diff    proportions diff
 """ 
 
-using PythonCall
+using PythonCall        # Used for calling Optuna with Python
 using Distributions     # Includes binomial and multinomial distributions
 using Random            # Allows random sampling from previous probability distributions
 using DelimitedFiles    # Enhances file I/O
 using LinearAlgebra
+
 include("constants.jl")
 include("monitor.jl")
 include("grid.jl")
@@ -44,11 +45,11 @@ A = 0.01                                                                    # Go
 # Objective parameters
 MEAN_ITERATION = 1800                                                       # 10 * 30 * 24 / DELTAT. (10 months)
 OBJECTIVE_SURFACE_REGULARITY = 0.7                                          # Other values could be set as well.
-OBJECTIVE_POPULATION_PROPORTION = [0.01, 0.04, 0.16, 0.158, 0.632]          # Can alse be different.
+OBJECTIVE_POPULATION_PROPORTION = [0.0001, 0.04, 0.16, 0.158, 0.632]        # Can also be different.
 
 # Optimization parameters
 
-N_TRIALS = 1000                                                             # Change to 1000 to get a more robust search
+N_TRIALS = 50                                                               # Change to 1000 to get a more robust search
 
 
 # HELPER FUNCTIONS
@@ -156,15 +157,15 @@ function _iter_length_diff(mean_iteration::Int64, iterations::Int64)
         Calculate the absolute difference between the mean number of iterations as the the survival time for Glioblastoma
         is between 8-12 months, so here the mean of 10 months has been considered, and assuming a deltat of 4 hours,
         the mean number of iterations would be 1800. 
-        This function will return the absolute difference between this mean number of iterations and the number of iterations that the simulation has taken to reach the maximum volume, which is a value to minimize in the optimization process.
+        This function outputs the normilized absolute difference
     """
-    return abs(mean_iteration - iterations)
+    return abs(mean_iteration - iterations) / mean_iteration
 end
 
 function _gompertz_rmse(iteration_array::Array{Int64,1}, simulation_array::Array{Float64,1})
     """
-        This function calculates the RMSE between the simulated growth curve and the Gompertzian curve for Glioblastoma described by Stensjøen et al. (2015).
-        This output is a single number and this will be the a valor to minimize in the optimization process. 
+        This function calculates the normalized RMSE between the simulated growth curve and the Gompertzian curve for Glioblastoma described by Stensjøen et al. (2015). 
+        The normalization is done with the maximun value of the Gompertz growth model.
     """
     t = _get_days_from_iteration(iteration_array, DELTAT)
     gompertzian_curve = _get_gmb_gompertzian_curve(V0, K, A, t)
@@ -182,18 +183,15 @@ end
 function _proportion_diff(population_proportions::Array{Float64, 1}, objective_proportions::Array{Float64, 1})
     """ 
         This function gives back a the RMSE between the popolation proportions and the objective propotion, which will be:
-        [0.01, 0.04, 0.16, 0.158, 0.632]
     """
     rmse = sqrt(mean((population_proportions - objective_proportions).^2))
     return rmse
 end
 
-
 # MAIN FUNCTION
 function _main_process(g::Grid, c::Constants, m::Monitor)
     """
         This is be the main process function. 
-        The 
     """
     iterations = Int64[]
     @time while m.Vol2[m.evalstep] < c.VolEnd
@@ -224,10 +222,11 @@ function objective(trial)
 
     # DEFINE THE SEARCH SPACE
 
-    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 1, 1000))
-    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 1000))
-    Mature_cell_rate = pyconvert(Float64, trial.suggest_float("Mature_cell_rate", 100, 1000))
+    CSC_rate = pyconvert(Float64,trial.suggest_float("CSC_rate", 100, 200))
+    Progeny_rate = pyconvert(Float64, trial.suggest_float("Progeny_rates", 1, 15))
+    Mature_cell_rate = pyconvert(Float64, trial.suggest_float("Mature_cell_rate", 1000, 2000))
     mig_rate = pyconvert(Float64, trial.suggest_float("mig_rate", 80, 300))
+    
     c.Grate[1] = CSC_rate
     c.Grate[2] = c.Grate[3] = Progeny_rate
     c.Grate[4] = c.Grate[5] = Mature_cell_rate
@@ -306,7 +305,7 @@ end
 results_matrix = reduce(vcat, permutedims.(results))
 
 writedlm(
-    "optuna_results.tsv",
+    "optuna_results_2.tsv",
     results_matrix,
     '\t'
 )
