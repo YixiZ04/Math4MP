@@ -187,15 +187,16 @@ end
 function o2_concentration(Popvox::Float64)
 
     """
-        This function calculates the oxygen concentration at each voxel taking into account a constant vascularization
+        This function calculates the oxygen concentration at each voxel taking into account a constant vascularization.
+        The output value is percentage of oxygen (%).
     """
     # V = 0.2
     # cv = 0.7  # vessel concentration
     # k1 = 0.0001
     # k2 = 1
-    # C = (k2 * V * cv) / (k2 * V + k1 * Popvox)
-    Cv0 = 100
-    k3 = 0.0005
+    # C = (k2 * V * cv) / (k2 * V + k1 * Popvox)    
+    Cv0 = 100                       # %
+    k3 = 0.0005                     
     C = Cv0 / (1 + k3 * Popvox)
     return C
 end
@@ -213,7 +214,7 @@ function reproduction_event!(g::Grid, c::Constants, Popgen::Float64,
     # Then, calculate a division probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the less cells will divide, so probability will be lower in crowded voxels
 
-    Prep = c.deltat / c.Grate[e] *(1-(Popvox + Necvox) / c.K) * o2_concentration(Popvox)
+    Prep = c.deltat / c.Grate[e] *(1-(Popvox + Necvox) / c.K)
     Prep = normalize_prob(Prep)
     # Random sample newborn cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated division probability
@@ -287,7 +288,7 @@ function migration_event!(g::Grid, c::Constants, Popvox::Float64,
     migrate = c.Migrate[e]
     # Then, calculate a migration probability depending on previous time, on time step length, and on voxel occupancy
     # The more cells a voxel has, the more cells will migrate, so probability will be higher in crowded voxels
-    Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K * o2_concentration(Popvox)
+    Pmig = c.deltat / migrate * (Popvox + Necvox) / c.K
     Pmig = normalize_prob(Pmig)
     # Random sample migrating cells from a binomial distribution, with N equal to the number of cells of current clonal population, and P equal to
     # previously calculated migration probability

@@ -77,7 +77,7 @@ end
 
 # Create a parameter file, to store randomly sampled initial parameters (characteristic times for each cell process)
 open(joinpath(@__DIR__, string("Sim",string(ARGS[1]),"/Params.txt")), "w") do file
-    println(file, c.Grate, " ", c.Drate, " ", c.Mutrate, " ", c.Migrate)
+    println(file, c.Grate, "\n", c.Drate, "\n", c.Migrate)
 end
 
 

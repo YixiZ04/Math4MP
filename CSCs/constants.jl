@@ -1,31 +1,17 @@
 """
-
-    MESOSCOPIC SIMULATOR v1.0.0
-
-    constants.jl
-
-    This module initializes all model parameters that remain constant throughout the whole simulation.
-    Those parameters include spatio-temporal domain (number of voxels, time step and time span), initial conditions
-    (starting population, number of alterations considered, voxel's carrying capacity), clonal population's characteristic
-    times (for cell division, cell death, migration and mutation), and mutation weights (influence of each alteration in each
-    process's characteristic times).
-
-
-    Designed and written by:
-           Juan Jimenez Sanchez - Predoctoral researcher -  Juan.JSanchez@uclm.es
-           Alvaro Martinez Rubio - Predoctoral researcher -  alvaro.martinezrubio@uca.es
-
-    Edited (Objects and modules) by:
-           Anton Popov - Predoctoral researcher - popovanton567@gmail.com
-           Juan Jimenez Sanchez
-
-    Principal investigator:
-           Victor M. Perez Garcia - Full Professor -   Victor.PerezGarcia@uclm.es
-
-    For any questions related to model usage or citation, please contact Victor.
-    For any inquiries related to model performance or improvements, please address
-    them to Juan or Alvaro.
-
+    Paramters have been changed for this model:
+        CSC_rate = [140, 160]
+        Progeny_rate = [1, 10]
+        Mature_cell_rate = [900, 1000]
+        Mig_rate = [175, 210]    
+        Death_rate = [80, 400]   (Only applied for the mature cells)
+    This also implies that the "param_dist.txt" has also been changed adapting to these changes.
+    
+    Datatypes have also been changed:
+        Grate::Array(Float64, 1)
+        Drate::Array(Float64, 1)
+        Migrate::Array(Float64, 1)
+    Eliminated Mutrate, as it is not relevant and also will add an extra complexity to this model based on the CSC hypothesis.
 """
 
 
@@ -59,19 +45,20 @@ mutable struct Constants
     # CHARACTERISTIC TIMES
     ################################################################################
 
-    fdata::Array{Float64,2} # Input file containinig mean and standard deviation of cell processes' characteristic times
-    Grate_mean::Float64     # Mean cell division time
-    Grate_sd::Float64       # Standard deviation of cell division time
-    Drate_mean::Float64     # Mean cell death time
-    Drate_sd::Float64       # Standard deviation of cell death time
-    Migrate_mean::Float64   # Mean cell migration time
-    Migrate_sd::Float64     # Standard deviation of cell migration time
-    Mutrate_mean::Float64   # Mean clonal population mutation time
-    Mutrate_sd::Float64     # Standard deviation of clonal population mutation time
-    Grate::Array{Float64,1}          # Basal cell division time
-    Drate::Array{Float64,1}          # Basal cell death time
-    Migrate::Array{Float64,1}        # Basal cell migration time
-    Mutrate::Float64        # Basal clonal population mutation time
+    fdata::Array{Float64,2}         # Input file containinig mean and standard deviation of cell processes' characteristic times
+    CSC_mean::Float64               # Mean cell division time
+    CSC_sd::Float64                 # Standard deviation of cell division time
+    Progeny_mean::Float64
+    Progeny_sd::Float64
+    Matcell_mean::Float64
+    Matcell_sd::Float64
+    Drate_mean::Float64             # Mean cell death time
+    Drate_sd::Float64               # Standard deviation of cell death time
+    Migrate_mean::Float64           # Mean cell migration time
+    Migrate_sd::Float64             # Standard deviation of cell migration time
+    Grate::Array{Float64,1}         # Basal cell division time
+    Drate::Array{Float64,1}         # Basal cell death time
+    Migrate::Array{Float64,1}       # Basal cell migration time
 
 
     ################################################################################
@@ -106,20 +93,33 @@ mutable struct Constants
 
         # Retrieve parameters from input file
         fdata = readdlm(joinpath(@__DIR__,"Param_dist.txt"))
-        Grate_mean = fdata[1,1];
-        Grate_sd = fdata[1,2];
-        Drate_mean = fdata[2,1];
-        Drate_sd = fdata[2,2];
-        Mutrate_mean = fdata[3,1];
-        Mutrate_sd = fdata[3,2];
+        CSC_mean = fdata[1,1];                                  
+        CSC_sd = fdata[1,2];
+        Progeny_mean = fdata[2, 1];
+        Progeny_sd = fdata[2, 2];
+        Matcell_mean = fdata[3, 1];
+        Matcell_sd = fdata[3, 2];
         Migrate_mean = fdata[4,1];
         Migrate_sd = fdata[4,2];
-
+        Drate_mean = fdata[5,1];
+        Drate_sd = fdata[5,2];
+     
+ 
         # Random sample characteristic times from uniform distributions based in Param_dist.txt data
-        Grate = [200.0, 11.0, 11.0, 1000.0, 1000.0] # CHANGE THIS
+        Grate = [
+                 rand(Uniform(CSC_mean-CSC_sd, CSC_mean+CSC_sd)),
+                 rand(Uniform(Progeny_mean-Progeny_sd, Progeny_sd)),
+                 rand(Uniform(Progeny_mean-Progeny_sd, Progeny_sd)),
+                 rand(Uniform(Matcell_mean-Matcell_sd, Matcell_mean+Matcell_sd)),
+                 rand(Uniform(Matcell_mean-Matcell_sd, Matcell_mean+Matcell_sd))
+                ] 
         Migrate = rand(Uniform(Migrate_mean-Migrate_sd, Migrate_mean+Migrate_sd), 5)
-        Drate = [0.0, 0.0, 0.0, rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd)), rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))]
-        Mutrate = rand(Uniform(Mutrate_mean-Mutrate_sd, Mutrate_mean+Mutrate_sd))
+        Drate = [0.0, 
+                 0.0, 
+                 0.0, 
+                 rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd)), 
+                 rand(Uniform(Drate_mean-Drate_sd, Drate_mean+Drate_sd))
+                ]
 
         # Create weights for surrounding voxels (Moore neighbourhood)
         c_old = 0
@@ -160,8 +160,12 @@ mutable struct Constants
         Pchoice[3, 5] = 1
 
         new(TimeStart, deltat, tspan, Nstep, N, Neval, NstepNevalRatio, VolEnd, alt, P0, K, threshold, fdata,
-        Grate_mean, Grate_sd, Drate_mean, Drate_sd, Migrate_mean, Migrate_sd,
-        Mutrate_mean, Mutrate_sd, Grate, Drate, Migrate, Mutrate, c_old, wcube, Pasim, Pchoice)
+        CSC_mean, CSC_sd, 
+        Progeny_mean, Progeny_sd,
+        Matcell_mean, Matcell_sd,
+        Migrate_mean, Migrate_sd, 
+        Drate_mean, Drate_sd, 
+        Grate, Drate, Migrate, c_old, wcube, Pasim, Pchoice)
 
     end
 end
